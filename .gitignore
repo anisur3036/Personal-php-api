@@ -1,0 +1,12 @@
+/node_modules
+/vendor
+/.idea
+/.vagrant
+npm-debug.log
+yarn-error.log
+.env
+/inc/env.php
+/test
+/RawFiles
+.php_cs.cache
+.phpcsfixer
