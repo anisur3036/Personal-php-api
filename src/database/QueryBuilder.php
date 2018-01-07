@@ -40,9 +40,9 @@ abstract class QueryBuilder
         );
     }
     
-    public function make(ConnectionInterface $connection)
+    public function make(ConnectionInterface $database)
     {
-       return $connection->connect();
+       return $database->connect();
     }
 
     /**
@@ -52,11 +52,11 @@ abstract class QueryBuilder
      */
     public function selectAll()
     {
-        $statement = $this->pdo->prepare("select * from {$this->getTable()}");
+        $stmt = $this->pdo->prepare("select * from {$this->getTable()}");
 
-        $statement->execute();
+        $stmt->execute();
 
-        return $statement->fetchAll(PDO::FETCH_CLASS);
+        return $stmt->fetchAll(PDO::FETCH_CLASS);
     }
 
     /**
@@ -65,18 +65,18 @@ abstract class QueryBuilder
      * @param  string $table
      * @param  array  $parameters
      */
-    public function insert(array $parameters)
+    public function insert(array $params)
     {
         $this->query = sprintf(
             'insert into %s (%s) values (%s)',
             $this->getTable(),
-            implode(', ', array_keys($parameters)),
-            ':' . implode(', :', array_keys($parameters))
+            implode(', ', array_keys($params)),
+            ':' . implode(', :', array_keys($params))
         );
         try {
-            $statement = $this->pdo->prepare($this->query);
+            $stmt = $this->pdo->prepare($this->query);
 
-            $statement->execute($parameters);
+            $stmt->execute($params);
         } catch (\PDOException $e) {
             //
         }
