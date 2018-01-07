@@ -4,8 +4,7 @@ namespace Anis\Database;
 
 use PDO;
 use Anis\Config;
-use Anis\Database\MSSQL;
-use Anis\Database\SQLite;
+use Anis\Database\Driver;
 use Anis\Database\ConnectionInterface;
 
 abstract class QueryBuilder
@@ -36,7 +35,9 @@ abstract class QueryBuilder
 
     public function __construct()
     {
-        $this->pdo = $this->make(new MySQL);
+        $this->pdo = $this->make(
+            Driver::driver(Config::get('driver'))
+        );
     }
     
     public function make(ConnectionInterface $connection)
@@ -84,6 +85,7 @@ abstract class QueryBuilder
     public function query($query)
     {
         $this->stmt = $this->pdo->prepare($query);
+        return $this;
     }
 
     //Binds the prep statement
@@ -112,7 +114,7 @@ abstract class QueryBuilder
         $this->stmt->execute();
     }
 
-    public function resultSet()
+    public function get()
     {
         $this->execute();
 
@@ -242,7 +244,7 @@ abstract class QueryBuilder
         $pagingQuery = $this->paging( $query, $recordPerPage, $extra);
         $this->query( $pagingQuery );
 
-        return $this->resultSet();
+        return $this->get();
     }
 
     public function links( $links, $listClass )
