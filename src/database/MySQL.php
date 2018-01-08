@@ -11,11 +11,11 @@ class MySQL implements ConnectionInterface
         try {
             $db = new \PDO(
                 'mysql:host=' . Config::get('mysql/host') . ';dbname=' . Config::get('mysql/db'),
-                Config::get('mysql/username'), 
+                Config::get('mysql/username'),
                 Config::get('mysql/password')
             );
             $db->setAttribute(
-                \PDO::ATTR_ERRMODE, 
+                \PDO::ATTR_ERRMODE,
                 \PDO::ERRMODE_EXCEPTION
             );
         } catch (\PDOException $e) {

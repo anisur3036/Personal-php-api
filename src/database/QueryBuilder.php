@@ -42,7 +42,7 @@ abstract class QueryBuilder
     
     public function make(ConnectionInterface $database)
     {
-       return $database->connect();
+        return $database->connect();
     }
 
     /**
@@ -56,7 +56,7 @@ abstract class QueryBuilder
 
         $stmt->execute();
 
-        return $stmt->fetchAll(PDO::FETCH_CLASS);
+        return $stmt->fetchAll(PDO::FETCH_CLASS, 'Anis\\' . $this->getClassName());
     }
 
     /**
@@ -118,7 +118,7 @@ abstract class QueryBuilder
     {
         $this->execute();
 
-        return $this->stmt->fetchAll(PDO::FETCH_CLASS);
+        return $this->stmt->fetchAll(PDO::FETCH_CLASS, 'Anis\\' . $this->getClassName());
     }
 
     public function lastInsertId()
@@ -130,7 +130,7 @@ abstract class QueryBuilder
     {
         $this->execute();
 
-        return $this->stmt->fetch(PDO::FETCH_OBJ);
+        return $this->stmt->fetch(PDO::FETCH_CLASS, 'Anis\\' . $this->getClassName());
     }
 
     public function totalRecords($query)
@@ -238,18 +238,18 @@ abstract class QueryBuilder
     {
         $this->limit = $limit;
         $query = "SELECT * FROM {$this->getTable()}";
-        $recordPerPage = ( isset( $_GET['limit'] ) ) ? $_GET['limit'] : $this->limit; //movies per page
-        $page = ( isset( $_GET['pg'] ) ) ? $_GET['pg'] : 1; //starting page
+        $recordPerPage = (isset($_GET['limit'])) ? $_GET['limit'] : $this->limit; //movies per page
+        $page = (isset($_GET['pg'])) ? $_GET['pg'] : 1; //starting page
         //$links = 1;
-        $pagingQuery = $this->paging( $query, $recordPerPage, $extra);
-        $this->query( $pagingQuery );
+        $pagingQuery = $this->paging($query, $recordPerPage, $extra);
+        $this->query($pagingQuery);
 
         return $this->get();
     }
 
-    public function links( $links, $listClass )
+    public function links($links, $listClass)
     {
-        return $this->createLinks( $links, $listClass );
+        return $this->createLinks($links, $listClass);
     }
 
     public function getTable()
@@ -265,8 +265,4 @@ abstract class QueryBuilder
     {
         return str_replace('\\', '', class_basename($this));
     }
-
-
-    
-    
 }

@@ -6,9 +6,9 @@ class Driver
     public static function driver($driver)
     {
         switch ($driver) {
-        	case 'mysql':
-        		return new \Anis\Database\MySQL();
-        		break;
+            case 'mysql':
+                return new \Anis\Database\MySQL();
+                break;
                 
             case 'sqlite':
                 return new \Anis\Database\SQLite();
@@ -17,7 +17,6 @@ class Driver
             case 'sqlsrv':
                 return new \Anis\Database\MSSQL();
                 break;
-            
         }
     }
 }

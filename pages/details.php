@@ -1,8 +1,8 @@
 <?php require_once 'header.php'; ?>
 <?php 
-	$objPost = new Post();
-	$post = $objPost->show($_GET['id']);
-	//var_dump($post);
+    $objPost = new Post();
+    $post = $objPost->show($_GET['id']);
+    //var_dump($post);
 ?>
 <!-- Page Header -->
 <!-- Set your background image for this header on the line below. -->
@@ -13,7 +13,7 @@
                 <div class="post-heading">
                     <h1><?php echo $post->title; ?></h1>
                     <!-- <h2 class="subheading">Problems look mighty small from 150 miles up</h2> -->
-                    <span class="meta">Posted by <a href="#"><?php echo $post->author; ?></a> <?php echo date('F j, Y, g:i a',strtotime($post->posted_date)); ?></span>
+                    <span class="meta">Posted by <a href="#"><?php echo $post->author; ?></a> <?php echo date('F j, Y, g:i a', strtotime($post->posted_date)); ?></span>
                 </div>
             </div>
         </div>
@@ -39,7 +39,7 @@
                 <?php 
                     $relatedPosts = $objPost->relatedPost($post->cat_name, $post->id);
                     if ($relatedPosts) :
-                    foreach ($relatedPosts as $relatedPost) : 
+                    foreach ($relatedPosts as $relatedPost) :
                 ?>
                 <div class="col-lg-4 col-md-4">
                     <h4 style="margin-bottom: -15px">
