@@ -10,4 +10,4 @@ yarn-error.log
 /RawFiles
 .php_cs.cache
 .phpcsfixer
-index.php
+/index.php
