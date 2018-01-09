@@ -59,6 +59,32 @@ abstract class QueryBuilder
         return $stmt->fetchAll(PDO::FETCH_CLASS, 'Anis\\' . $this->getClassName());
     }
 
+    public function exists($data)
+    {
+        $field = array_keys($data)[0];
+
+        return $this->where($field, '=', $data[$field])->count() ? true : false;
+    }
+
+    public function table($table)
+    {
+        $this->table = $table;
+        
+        return $this;
+    }
+    public function where($field, $operator, $value)
+    {
+        $sql = "SELECT * FROM {$this->getTable()} WHERE {$field} {$operator} ?";
+        $this->stmt = $this->pdo->prepare($sql);
+        $this->stmt->execute([$value]);
+
+        return $this;
+    }
+
+    public function count()
+    {
+        return $this->stmt->rowCount();
+    }
     /**
      * Insert a record into a table.
      *

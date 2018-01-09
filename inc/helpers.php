@@ -13,3 +13,18 @@ if (! function_exists('class_basename')) {
         return basename(str_replace('\\', '/', $class));
     }
 }
+
+if (! function_exists('old')) {
+    /**
+     * Get the class "basename" of the given object / class.
+     *
+     * @param  string|object  $class
+     * @return string
+     */
+    function old($field)
+    {
+        if (isset($_POST[$field])) {
+            echo $_POST[$field];
+        }
+    }
+}
