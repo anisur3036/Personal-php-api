@@ -3,8 +3,8 @@ if (!isset($_SESSION)) {
     session_start();
 }
 // site domain name with http
-defined("SITE_URL")
-    || define("SITE_URL", "http://".$_SERVER['SERVER_NAME']);
+//defined("SITE_URL")
+//    || define("SITE_URL", "http://".$_SERVER['SERVER_NAME']);
     
 // directory separator
 defined("DS")

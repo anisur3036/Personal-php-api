@@ -1,9 +1,9 @@
 <?php
 namespace Anis;
 
-use Anis\Database\QueryBuilder as Model;
+use Anis\Database\Model;
 
 class User extends Model
 {
-    
+	
 }

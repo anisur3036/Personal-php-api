@@ -4,27 +4,30 @@ namespace Anis\Database;
 
 use PDO;
 use Anis\Config;
+use Anis\Database\Query;
 use Anis\Database\Driver;
 use Anis\Database\ConnectionInterface;
 
-abstract class QueryBuilder
+abstract class Model
 {
     protected $table;
 
     protected $stmt;
 
-    public $numOfRows;
+    protected $numOfRows;
 
-    private $page;
+    protected $page;
 
-    public $limit;
+    protected $limit;
+
+    protected $error = false;
 
     /**
      * The PDO instance.
      *
      * @var PDO
      */
-    public $pdo;
+    protected $pdo;
 
     /**
      * Create a new QueryBuilder instance.
@@ -40,9 +43,48 @@ abstract class QueryBuilder
         );
     }
     
+    public function error()
+    {
+        return $this->error;
+    }
+
     public function make(ConnectionInterface $database)
     {
         return $database->connect();
+    }
+
+    /**
+     * get the latest result order by created_at field
+     *         
+     * @param  string $column 
+     * @return $this|static
+     */
+    public static function latest($column = 'created_at')
+    {
+        return (new static)->orderBy($column);
+    }
+
+    /**
+     * Get all result
+     * 
+     * @return array
+     */
+    public static function all()
+    {
+        return (new static)->selectAll();
+    }
+
+    /**
+     * Get Order by query
+     * 
+     * @param  string $column 
+     * @return $this
+     */
+    protected function orderBy($column = 'created_at')
+    {
+        $sql = "select * from {$this->getTable()} order by {$column} desc";
+
+        return $this->query($sql);
     }
 
     /**
@@ -52,13 +94,19 @@ abstract class QueryBuilder
      */
     public function selectAll()
     {
-        $stmt = $this->pdo->prepare("select * from {$this->getTable()}");
+        $ins = new static;
+        $stmt = $ins->pdo->prepare("select * from {$ins->getTable()}");
 
         $stmt->execute();
 
-        return $stmt->fetchAll(PDO::FETCH_CLASS, 'Anis\\' . $this->getClassName());
+        return $stmt->fetchAll(PDO::FETCH_CLASS, 'Anis\\' . $ins->getClassName());
     }
 
+    /**
+     * Database query field result exist or not
+     * @param  array
+     * @return bool
+     */
     public function exists($data)
     {
         $field = array_keys($data)[0];
@@ -66,13 +114,15 @@ abstract class QueryBuilder
         return $this->where($field, '=', $data[$field])->count() ? true : false;
     }
 
-    public function table($table)
-    {
-        $this->table = $table;
-        
-        return $this;
-    }
-    public function where($field, $operator, $value)
+    /**
+     * Find result by field value pair
+     * 
+     * @param  string $field
+     * @param  string $operator
+     * @param  mixed $value
+     * @return $this
+     */
+    protected function where($field, $operator, $value)
     {
         $sql = "SELECT * FROM {$this->getTable()} WHERE {$field} {$operator} ?";
         $this->stmt = $this->pdo->prepare($sql);
@@ -85,6 +135,7 @@ abstract class QueryBuilder
     {
         return $this->stmt->rowCount();
     }
+
     /**
      * Insert a record into a table.
      *
@@ -93,14 +144,14 @@ abstract class QueryBuilder
      */
     public function insert(array $params)
     {
-        $this->query = sprintf(
+        $sql = sprintf(
             'insert into %s (%s) values (%s)',
             $this->getTable(),
             implode(', ', array_keys($params)),
             ':' . implode(', :', array_keys($params))
         );
         try {
-            $stmt = $this->pdo->prepare($this->query);
+            $stmt = $this->pdo->prepare($sql);
 
             $stmt->execute($params);
         } catch (\PDOException $e) {
@@ -108,9 +159,43 @@ abstract class QueryBuilder
         }
     }
 
-    public function query($query)
+    public function update($id, $fields)
+    {
+        $set = '';
+        $x = 1;
+
+        foreach ($fields as $name => $value) {
+            $set .= "{$name} = :{$name}";
+            if ($x < count($fields)) {
+                $set .= ', ';
+            }
+            $x++;
+        }
+
+        $sql = "UPDATE {$this->getTable()} SET {$set} WHERE id = {$id}";
+        
+        try {
+            $this->query($sql, $fields);
+        } catch (\PDOException $e) {
+            $e->getMessage();
+        }
+    }
+
+    public function query($query, $params = [])
+    {
+        $instance = new static;
+        $instance->stmt = $instance->pdo->prepare($query);
+        $instance->execute($params);
+
+        return $instance;
+    }
+
+    protected function makePaginate($query, $params = [])
     {
         $this->stmt = $this->pdo->prepare($query);
+
+        $this->execute($params);
+
         return $this;
     }
 
@@ -135,15 +220,16 @@ abstract class QueryBuilder
         $this->stmt->bindValue($param, $value, $type);
     }
 
-    public function execute()
+    protected function execute( $params = [])
     {
-        $this->stmt->execute();
+        if (!empty($params)) {
+            $this->stmt->execute($params);
+        }
+         $this->stmt->execute();
     }
 
     public function get()
     {
-        $this->execute();
-
         return $this->stmt->fetchAll(PDO::FETCH_CLASS, 'Anis\\' . $this->getClassName());
     }
 
@@ -152,22 +238,19 @@ abstract class QueryBuilder
         return $this->pdo->lastInsertId();
     }
 
-    public function single()
+    public function first()
     {
-        $this->execute();
-
-        return $this->stmt->fetch(PDO::FETCH_CLASS, 'Anis\\' . $this->getClassName());
+        return $this->stmt->fetch(PDO::FETCH_OBJ);
     }
 
-    public function totalRecords($query)
+    protected function totalRecords($query)
     {
-        $this->query($query);
-        $this->execute();
+        $this->makePaginate($query);
 
         return $this->stmt->rowCount();
     }
 
-    public function paging($query, $limit, $extra = [])
+    protected function paging($query, $limit, $extra = [])
     {
         $this->limit = $limit;
         $starting_position = 0;
@@ -208,24 +291,10 @@ abstract class QueryBuilder
         //calculate end of range for link printing
         $end = (($this->page + $links) < $last) ? $this->page + $links : $last;
 
-        // debugging
-        /* echo '$total: '.$total.' | '; //total rows
-         echo '$row_start: '.$rowStart.' | '; //total rows
-         echo '$limit: '.$this->limit.' | '; //total rows per query
-         echo '$start: '.$start.' | '; //start printing links from
-         echo '$end: '.$end.' | '; //end printing links at
-         echo '$last: '.$last.' | '; //last page
-         echo '$page: '.$this->page.' | '; //current page
-         echo '$links: '.$links.' <br /> '; //links */
-
-        //ul boot strap class - "pagination pagination-sm"
         $html = '<ul class="' . $listClass . '">';
 
-        $class = ($this->page == 1) ? "disabled" : ""; //disable previous page link <<<
+        $class = ($this->page == 1) ? "disabled" : ""; 
 
-        //create the links and pass limit and page as $_GET parameters
-
-        //$this->_page - 1 = previous page (<<< link )
         $previousPage = ($this->page == 1) ?
             '<a href=""><li class="' . $class . '">&laquo;</a></li>' : //remove link from previous button
             '<li class="' . $class . '"><a href="?limit=' . $this->limit . '&pg=' . ($this->page - 1) . '">&laquo;</a></li>';
@@ -260,6 +329,20 @@ abstract class QueryBuilder
         return $html;
     }
 
+    public function resultSet()
+    {
+        $this->execute();
+
+        return $this->stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get the pagination
+     * 
+     * @param  int $limit 
+     * @param  array  $extra extra query
+     * @return array
+     */
     public function paginate($limit, $extra = [])
     {
         $this->limit = $limit;
@@ -268,7 +351,7 @@ abstract class QueryBuilder
         $page = (isset($_GET['pg'])) ? $_GET['pg'] : 1; //starting page
         //$links = 1;
         $pagingQuery = $this->paging($query, $recordPerPage, $extra);
-        $this->query($pagingQuery);
+        $this->makePaginate($pagingQuery);
 
         return $this->get();
     }
@@ -278,6 +361,11 @@ abstract class QueryBuilder
         return $this->createLinks($links, $listClass);
     }
 
+    /**
+     * Get the database table name according to calling class's plural virsion
+     * 
+     * @return string
+     */
     public function getTable()
     {
         if (! isset($this->table)) {
@@ -287,8 +375,123 @@ abstract class QueryBuilder
         return $this->table;
     }
     
+    /**
+     * Get the calling class name
+     * 
+     * @return string 
+     */
     public function getClassName()
     {
         return str_replace('\\', '', class_basename($this));
     }
+
+    /**
+     * Find result by cloumn name [magically]
+     * 
+     * @param  string $args [cloumn name]
+     * @return $this
+     */
+    public function find($args)
+    {
+        $sql = "select * from {$this->getTable()} where {$args['field']} = ?";
+        $this->stmt = $this->pdo->prepare($sql);
+        $this->stmt->execute([$args['value']]);
+
+        return $this;
+    }
+
+    /**
+     * 
+     * @param  array $where [where parameters]
+     * @param  array|string $order order parameters
+     * @param  int $limit sql limit
+     * @return $this
+     */
+    public function selectWhere($where = null, $order = null, $limit = null ) 
+    {
+        $instance = new static;
+        $sql = 'SELECT * FROM ' . $instance->getTable();
+
+        if ( $where && $where = $instance->conditions( $where ) ) {
+            $sql .= ' WHERE ' . $where->sql;
+        }
+        if ( $order ) {
+            $sql .= ' ORDER BY ' . ( is_array( $order ) ? implode( ', ', $order ) : $order );
+        }
+        if ( $limit ) {
+            $sql .= ' LIMIT ' . $limit;
+        }
+
+        return $instance->query( $sql, $where->params );
+    }
+
+    /**
+     * Get the complex condition result
+     * 
+     * @param  array  $conditions
+     * @return object
+     */
+    protected static function conditions( array $conditions ) 
+    {
+        $sql    = array();
+        $params = array();
+        $i      = 0;
+        foreach ( $conditions as $condition => $param ) {
+            if ( is_string( $condition ) ) {
+
+                for ( $keys = array(), $n = 0; false !== ( $n = strpos( $condition, '?', $n ) ); $n ++ ) {
+                    $condition = substr_replace( $condition, ':' . ( $keys[] = '_' . ++ $i ), $n, 1 );
+                }
+
+                if ( ! empty( $keys ) ) {
+                    $param = array_combine( $keys, (array) $param );
+                }
+
+                $params += (array) $param;
+
+            } else {
+                $condition = $param;
+            }
+
+            $sql[] = $condition;
+        }
+
+        return (object) array( 
+            'sql'    => '( ' . implode( ' ) AND ( ', $sql ) . ' )',
+            'params' => $params
+        );
+    }
+
+    /**
+     * Handle dynamic method calls into the method
+     * @param  string $method 
+     * @param  array $parameters   
+     * @return mixed
+     */
+    public function __call($method, $parameters)
+    {
+        if (preg_match('/^findBy(.+)$/', $method, $matches)) {
+            return static::find([
+                'field' => strtolower($matches[1]),
+                'value' => $parameters[0]
+            ]);
+        }
+
+        if (method_exists($this, $method)) {
+            return $this->$method(...$parameters);
+        }
+    }
+
+    /**
+     * Handle dynamic static method calls into the method.
+     *
+     * @param  string  $method
+     * @param  array  $parameters
+     * @return mixed
+     */
+    public static function __callStatic($method, $parameters)
+    {
+        return (new static)->$method(...$parameters);
+    }
+
 }
