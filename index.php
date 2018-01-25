@@ -30,7 +30,7 @@ var_dump($obj->links(1, 'anis'));*/
 // $p = Post::all();
 
 // $p = Post::where('id', '=', 1)->get();
-$p = new User;
+$post = new User;
 /*$p->insert([
 	'username' => 'Dev'
 ]);
@@ -40,12 +40,12 @@ $p->update(2, [
 ]);*/
 
 // 
-var_dump($p);
-die();
+// var_dump($p);
+// die();
 
 
 
-// $validation = new Validator(new ErrorHandler, $post);
+$validation = new Validator(new ErrorHandler, $post);
 
 if (Input::exists()) {
 	if (Token::check(Input::get('token'))) {
