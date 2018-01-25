@@ -14,8 +14,8 @@ Simple Model Class with SQL query builder for PDO.
 
 Create a database connection based on database drive
 
-	MySQL, MSSQL, SQL
-	
+	MySQL, MSSQL, SQLite
+
 just you can spaceify any supported driver by inc/env.php
 
  	'driver' => 'mysql', //sqlsrv, sqlite
