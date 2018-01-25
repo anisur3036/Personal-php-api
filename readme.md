@@ -12,7 +12,7 @@ Simple Model Class with SQL query builder for PDO.
 
 ### Connection
 
-Create a database connection base on database drive
+Create a database connection based on database drive
 
 	MySQL, MSSQL, SQL
 	
